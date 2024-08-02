@@ -1,12 +1,12 @@
 {
-  "name": "tina-schema-generator-ts",
+  "name": "test",
   "version": "1.0.0",
   "description": "Generate TinaCMS schemas for AstroJS projects.",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "bin": {
-    "tina-schema-generator-ts": "dist/index.cjs"
+    "test": "dist/index.cjs"
   },
   "scripts": {
     "build": "rollup -c --bundleConfigAsCjs",
