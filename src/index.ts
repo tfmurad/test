@@ -21,7 +21,16 @@ async function fetchAndRunScript(url: string, moduleType: string) {
 
       // Use dynamic import to load the script
       const fileUrl = pathToFileURL(tempFilePath);
-      await import(fileUrl.href);
+      const module = await import(fileUrl.href);
+
+      // Call the exported function if it exists
+      if (typeof module.generateSchemas === "function") {
+        module.generateSchemas();
+      } else {
+        console.error(
+          "No function named 'generateSchemas' found in the script."
+        );
+      }
 
       // Clean up the temporary file
       fs.unlinkSync(tempFilePath);
