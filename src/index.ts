@@ -7,30 +7,35 @@ import { select } from "@inquirer/prompts";
 import vm from "vm";
 
 // Function to fetch and run script from URL
-async function fetchAndRunScript(url: string) {
+async function fetchAndRunScript(url: string, moduleType: string) {
   try {
     const response = await axios.get(url);
     const scriptContent = response.data;
 
-    // Create a new context with CommonJS-like globals
-    const context = vm.createContext({
-      require,
-      console,
-      process,
-      exports: {},
-      module: { exports: {} },
-    });
+    if (moduleType === "ES Modules") {
+      // Use dynamic import for ES Modules
+      const blob = new Blob([scriptContent], {
+        type: "application/javascript",
+      });
+      const blobUrl = URL.createObjectURL(blob);
 
-    // Execute the script in the context
-    const script = new vm.Script(scriptContent);
-    script.runInContext(context);
+      await import(blobUrl);
 
-    // Call the exported function
-    // if (typeof context.module.exports.generateSchemas === "function") {
-    //   context.module.exports.generateSchemas();
-    // } else {
-    //   console.error("No function named 'generateSchemas' found in the script.");
-    // }
+      URL.revokeObjectURL(blobUrl);
+    } else {
+      // Create a new context with CommonJS-like globals
+      const context = vm.createContext({
+        require,
+        console,
+        process,
+        exports: {},
+        module: { exports: {} },
+      });
+
+      // Execute the script in the context
+      const script = new vm.Script(scriptContent);
+      script.runInContext(context);
+    }
   } catch (error: any) {
     console.error("Error fetching or running the script:", error.message);
   }
@@ -52,7 +57,7 @@ async function setup() {
         ? "https://raw.githubusercontent.com/tfmurad/test/main/dist/scripts/generate-tina-schema.cjs"
         : "https://raw.githubusercontent.com/tfmurad/test/main/dist/scripts/generate-tina-schema.mjs";
 
-    await fetchAndRunScript(scriptUrl);
+    await fetchAndRunScript(scriptUrl, moduleType);
   } catch (error: any) {
     console.error("Error during setup:", error.message);
   }

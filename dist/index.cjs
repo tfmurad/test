@@ -19,55 +19,23 @@ var node_async_hooks = require('node:async_hooks');
 var require$$0$6 = require('tty');
 
 function _interopNamespaceDefault(e) {
-    var n = Object.create(null);
-    if (e) {
-        Object.keys(e).forEach(function (k) {
-            if (k !== 'default') {
-                var d = Object.getOwnPropertyDescriptor(e, k);
-                Object.defineProperty(n, k, d.get ? d : {
-                    enumerable: true,
-                    get: function () { return e[k]; }
-                });
-            }
+  var n = Object.create(null);
+  if (e) {
+    Object.keys(e).forEach(function (k) {
+      if (k !== 'default') {
+        var d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: function () { return e[k]; }
         });
-    }
-    n.default = e;
-    return Object.freeze(n);
+      }
+    });
+  }
+  n.default = e;
+  return Object.freeze(n);
 }
 
 var readline__namespace = /*#__PURE__*/_interopNamespaceDefault(readline$1);
-
-/******************************************************************************
-Copyright (c) Microsoft Corporation.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol */
-
-
-function __awaiter(thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-}
-
-typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
-    var e = new Error(message);
-    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-};
 
 function bind(fn, thisArg) {
   return function wrap() {
@@ -13510,11 +13478,11 @@ const hasStandardBrowserWebWorkerEnv = (() => {
 const origin = hasBrowserEnv && window.location.href || 'http://localhost';
 
 var utils = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    hasBrowserEnv: hasBrowserEnv,
-    hasStandardBrowserEnv: hasStandardBrowserEnv,
-    hasStandardBrowserWebWorkerEnv: hasStandardBrowserWebWorkerEnv,
-    origin: origin
+  __proto__: null,
+  hasBrowserEnv: hasBrowserEnv,
+  hasStandardBrowserEnv: hasStandardBrowserEnv,
+  hasStandardBrowserWebWorkerEnv: hasStandardBrowserWebWorkerEnv,
+  origin: origin
 });
 
 var platform = {
@@ -22953,11 +22921,20 @@ var select = createPrompt((config, done) => {
 });
 
 // Function to fetch and run script from URL
-function fetchAndRunScript(url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const response = yield axios$1.get(url);
-            const scriptContent = response.data;
+async function fetchAndRunScript(url, moduleType) {
+    try {
+        const response = await axios$1.get(url);
+        const scriptContent = response.data;
+        if (moduleType === "ES Modules") {
+            // Use dynamic import for ES Modules
+            const blob = new Blob([scriptContent], {
+                type: "application/javascript",
+            });
+            const blobUrl = URL.createObjectURL(blob);
+            await import(blobUrl);
+            URL.revokeObjectURL(blobUrl);
+        }
+        else {
             // Create a new context with CommonJS-like globals
             const context = vm.createContext({
                 require,
@@ -22969,38 +22946,30 @@ function fetchAndRunScript(url) {
             // Execute the script in the context
             const script = new vm.Script(scriptContent);
             script.runInContext(context);
-            // Call the exported function
-            // if (typeof context.module.exports.generateSchemas === "function") {
-            //   context.module.exports.generateSchemas();
-            // } else {
-            //   console.error("No function named 'generateSchemas' found in the script.");
-            // }
         }
-        catch (error) {
-            console.error("Error fetching or running the script:", error.message);
-        }
-    });
+    }
+    catch (error) {
+        console.error("Error fetching or running the script:", error.message);
+    }
 }
 // Function to set up the package
-function setup() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const moduleType = yield select({
-                message: "Is your project using CommonJS or ES Modules?",
-                choices: [
-                    { name: "CommonJS", value: "CommonJS" },
-                    { name: "ES Modules", value: "ES Modules" },
-                ],
-            });
-            const scriptUrl = moduleType === "CommonJS"
-                ? "https://raw.githubusercontent.com/tfmurad/tina-schema-generator-ts/main/dist/scripts/generate-tina-schema.cjs"
-                : "https://raw.githubusercontent.com/tfmurad/tina-schema-generator-ts/main/dist/scripts/generate-tina-schema.mjs";
-            yield fetchAndRunScript(scriptUrl);
-        }
-        catch (error) {
-            console.error("Error during setup:", error.message);
-        }
-    });
+async function setup() {
+    try {
+        const moduleType = await select({
+            message: "Is your project using CommonJS or ES Modules?",
+            choices: [
+                { name: "CommonJS", value: "CommonJS" },
+                { name: "ES Modules", value: "ES Modules" },
+            ],
+        });
+        const scriptUrl = moduleType === "CommonJS"
+            ? "https://raw.githubusercontent.com/tfmurad/test/main/dist/scripts/generate-tina-schema.cjs"
+            : "https://raw.githubusercontent.com/tfmurad/test/main/dist/scripts/generate-tina-schema.mjs";
+        await fetchAndRunScript(scriptUrl, moduleType);
+    }
+    catch (error) {
+        console.error("Error during setup:", error.message);
+    }
 }
 // Path to check the 'tina' folder in the project root
 const projectRoot = process.cwd();
