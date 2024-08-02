@@ -5,6 +5,8 @@ import path from "path";
 import axios from "axios";
 import { select } from "@inquirer/prompts";
 import vm from "vm";
+import { fileURLToPath, pathToFileURL } from "url";
+import os from "os";
 
 // Function to fetch and run script from URL
 async function fetchAndRunScript(url: string, moduleType: string) {
@@ -13,15 +15,16 @@ async function fetchAndRunScript(url: string, moduleType: string) {
     const scriptContent = response.data;
 
     if (moduleType === "ES Modules") {
-      // Use dynamic import for ES Modules
-      const blob = new Blob([scriptContent], {
-        type: "application/javascript",
-      });
-      const blobUrl = URL.createObjectURL(blob);
+      // Write the script to a temporary file
+      const tempFilePath = path.join(os.tmpdir(), "temp-script.mjs");
+      fs.writeFileSync(tempFilePath, scriptContent);
 
-      await import(blobUrl);
+      // Use dynamic import to load the script
+      const fileUrl = pathToFileURL(tempFilePath);
+      await import(fileUrl.href);
 
-      URL.revokeObjectURL(blobUrl);
+      // Clean up the temporary file
+      fs.unlinkSync(tempFilePath);
     } else {
       // Create a new context with CommonJS-like globals
       const context = vm.createContext({
@@ -35,6 +38,15 @@ async function fetchAndRunScript(url: string, moduleType: string) {
       // Execute the script in the context
       const script = new vm.Script(scriptContent);
       script.runInContext(context);
+
+      // Check and call the exported function if exists
+      if (typeof context.module.exports.generateSchemas === "function") {
+        context.module.exports.generateSchemas();
+      } else {
+        console.error(
+          "No function named 'generateSchemas' found in the script."
+        );
+      }
     }
   } catch (error: any) {
     console.error("Error fetching or running the script:", error.message);

@@ -1,20 +1,21 @@
 #!/usr/bin/env node
-import require$$0$4 from 'fs';
+import fs$1 from 'fs';
 import require$$1 from 'path';
 import require$$0$2, { TextEncoder as TextEncoder$1 } from 'util';
 import stream, { Readable } from 'stream';
 import require$$3 from 'http';
 import require$$4 from 'https';
-import require$$0$3 from 'url';
+import require$$0$3, { pathToFileURL } from 'url';
 import require$$4$1 from 'assert';
 import zlib from 'zlib';
 import { EventEmitter } from 'events';
 import vm from 'vm';
-import require$$0$5 from 'node:tty';
+import os from 'os';
+import require$$0$4 from 'node:tty';
 import process$2 from 'node:process';
 import * as readline$1 from 'node:readline';
 import { AsyncLocalStorage, AsyncResource } from 'node:async_hooks';
-import require$$0$6 from 'tty';
+import require$$0$5 from 'tty';
 
 function bind(fn, thisArg) {
   return function wrap() {
@@ -12505,7 +12506,7 @@ var path = require$$1;
 var http$1 = require$$3;
 var https$1 = require$$4;
 var parseUrl$2 = require$$0$3.parse;
-var fs = require$$0$4;
+var fs = fs$1;
 var Stream$1 = stream.Stream;
 var mime = mimeTypes;
 var asynckit = asynckit$1;
@@ -17836,7 +17837,7 @@ function useEffect(cb, depArray) {
     });
 }
 
-const tty = require$$0$5;
+const tty = require$$0$4;
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Use a better method when it's added to Node.js (https://github.com/nodejs/node/pull/40240)
@@ -19777,7 +19778,7 @@ function normalizeOpts(options) {
   const defaultOpts = {
     defaultWidth: 0,
     output: process.stdout,
-    tty: require$$0$6,
+    tty: require$$0$5,
   };
 
   if (!options) {
@@ -22905,13 +22906,14 @@ async function fetchAndRunScript(url, moduleType) {
         const response = await axios$1.get(url);
         const scriptContent = response.data;
         if (moduleType === "ES Modules") {
-            // Use dynamic import for ES Modules
-            const blob = new Blob([scriptContent], {
-                type: "application/javascript",
-            });
-            const blobUrl = URL.createObjectURL(blob);
-            await import(blobUrl);
-            URL.revokeObjectURL(blobUrl);
+            // Write the script to a temporary file
+            const tempFilePath = require$$1.join(os.tmpdir(), "temp-script.mjs");
+            fs$1.writeFileSync(tempFilePath, scriptContent);
+            // Use dynamic import to load the script
+            const fileUrl = pathToFileURL(tempFilePath);
+            await import(fileUrl.href);
+            // Clean up the temporary file
+            fs$1.unlinkSync(tempFilePath);
         }
         else {
             // Create a new context with CommonJS-like globals
@@ -22925,6 +22927,13 @@ async function fetchAndRunScript(url, moduleType) {
             // Execute the script in the context
             const script = new vm.Script(scriptContent);
             script.runInContext(context);
+            // Check and call the exported function if exists
+            if (typeof context.module.exports.generateSchemas === "function") {
+                context.module.exports.generateSchemas();
+            }
+            else {
+                console.error("No function named 'generateSchemas' found in the script.");
+            }
         }
     }
     catch (error) {
@@ -22954,7 +22963,7 @@ async function setup() {
 const projectRoot = process.cwd();
 const tinaFolderPath = require$$1.join(projectRoot, "tina");
 // Check if the 'tina' folder exists
-require$$0$4.access(tinaFolderPath, require$$0$4.constants.F_OK, (err) => {
+fs$1.access(tinaFolderPath, fs$1.constants.F_OK, (err) => {
     if (!err) {
         setup().catch((error) => console.error("Error in setup function:", error.message));
     }
